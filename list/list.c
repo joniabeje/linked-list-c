@@ -17,7 +17,7 @@ static node_t *node_new(elem value) {
   return n;
 }
 
-/* public wrappers (some courses expect getNode to exist) */
+/* public wrapper kept for your header/tests */
 node_t *getNode(elem value) { return node_new(value); }
 
 list_t *list_alloc(void) {
@@ -39,13 +39,8 @@ void list_free(list_t *l) {
 }
 
 void list_print(list_t *l) {
-  if (!l) { printf("(null)\n"); return; }
-  node_t *c = l->head;
-  if (!c) { printf("NULL\n"); return; }
-  while (c) {
-    printf("%d->", c->value);
-    c = c->next;
-  }
+  if (!l || !l->head) { printf("NULL\n"); return; }
+  for (node_t *c = l->head; c; c = c->next) printf("%d->", c->value);
   printf("NULL\n");
 }
 
@@ -55,20 +50,17 @@ char *listToString(list_t *l) {
     strcpy(s, "NULL");
     return s;
   }
-  /* simple big buffer OK for this lab */
   char *buf = (char *)malloc(10024);
   if (!buf) { fprintf(stderr, "malloc failed\n"); exit(1); }
   buf[0] = '\0';
 
   char tbuf[32];
-  node_t *curr = l->head;
-  while (curr) {
-    snprintf(tbuf, sizeof(tbuf), "%d->", curr->value);
+  for (node_t *c = l->head; c; c = c->next) {
+    snprintf(tbuf, sizeof(tbuf), "%d->", c->value);
     strcat(buf, tbuf);
-    curr = curr->next;
   }
   strcat(buf, "NULL");
-  return buf;   /* caller may free */
+  return buf;
 }
 
 int list_length(list_t *l) {
@@ -91,18 +83,21 @@ void list_add_to_back(list_t *l, elem value) {
   c->next = n;
 }
 
+/* ---------- 1-based indexing; out-of-range => NO-OP ---------- */
 void list_add_at_index(list_t *l, elem value, int index) {
-  /* 1-based indexing. index<=1 => prepend. index beyond end => append. */
-  if (!l || index <= 1 || !l->head) { list_add_to_front(l, value); return; }
+  if (!l || index <= 0) return;
 
+  if (index == 1) { list_add_to_front(l, value); return; }
+  if (!l->head) return;  // index>1 but empty -> no-op
+
+  // walk to node at position (index-1); if absent, no-op
   node_t *prev = l->head;
   int pos = 1;
   while (prev && pos < index - 1) { prev = prev->next; pos++; }
-
-  if (!prev || !prev->next) { list_add_to_back(l, value); return; }
+  if (!prev) return;   // index beyond length -> no-op
 
   node_t *n = node_new(value);
-  n->next = prev->next;
+  n->next = prev->next;   // inserts in middle or at tail when index == length+1
   prev->next = n;
 }
 
@@ -128,15 +123,15 @@ elem list_remove_from_back(list_t *l) {
   return v;
 }
 
+/* ---------- 1-based indexing; out-of-range => -1 (no change) ---------- */
 elem list_remove_at_index(list_t *l, int index) {
-  /* 1-based indexing; invalid => -1, no modification */
   if (!l || index <= 0 || !l->head) return -1;
   if (index == 1) return list_remove_from_front(l);
 
   node_t *prev = l->head;
   int pos = 1;
   while (prev && pos < index - 1) { prev = prev->next; pos++; }
-  if (!prev || !prev->next) return -1;   /* out of range */
+  if (!prev || !prev->next) return -1;  // out of range
 
   node_t *del = prev->next;
   elem v = del->value;
@@ -151,11 +146,10 @@ bool list_is_in(list_t *l, elem value) {
   return false;
 }
 
+/* keep your getters 1-based like your main expects */
 elem list_get_elem_at(list_t *l, int index) {
-  /* 1-based; -1 for invalid */
   if (!l || index <= 0) return -1;
-  node_t *c = l->head;
-  int pos = 1;
+  node_t *c = l->head; int pos = 1;
   while (c && pos < index) { c = c->next; pos++; }
   return c ? c->value : -1;
 }
